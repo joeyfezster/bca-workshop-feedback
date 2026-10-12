@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How am I doing?</title>
+<style>
+:root{--paper:#F6F1E7;--card:#FFFCF6;--ink:#1B1D21;--muted:#5A5D64;--blue:#234B74;--gold:#E0A526;--line:rgba(27,29,33,.16)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:520px;margin:0 auto;padding:28px 20px 48px}
+.tag{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px}
+.tag::before{content:"";width:26px;height:3px;background:var(--gold);border-radius:2px}
+h1{font:600 40px/1.05 "Iowan Old Style",Palatino,Georgia,serif;letter-spacing:-.01em;margin:14px 0 8px}
+p.lead{color:var(--muted);margin:0 0 26px;font-size:17px;line-height:1.4}
+fieldset{border:0;padding:0;margin:0 0 26px}
+legend{font-weight:650;font-size:19px;padding:0;margin-bottom:12px}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.choices label{display:block;cursor:pointer}
+.choices input{position:absolute;opacity:0;pointer-events:none}
+.choices span{display:flex;align-items:center;justify-content:center;text-align:center;min-height:64px;padding:8px;border-radius:14px;background:var(--card);box-shadow:0 0 0 1.5px var(--line);font-weight:600;font-size:16px}
+.choices input:checked+span{background:var(--blue);color:#fff;box-shadow:0 0 0 1.5px var(--blue)}
+.choices input:focus-visible+span{outline:3px solid var(--gold);outline-offset:2px}
+textarea{width:100%;min-height:120px;border:0;border-radius:14px;background:var(--card);box-shadow:0 0 0 1.5px var(--line);padding:14px;font:inherit;font-size:17px;color:var(--ink);resize:vertical}
+textarea:focus{outline:3px solid var(--gold);outline-offset:1px}
+button{width:100%;border:0;border-radius:999px;background:var(--blue);color:#fff;font:650 18px/1 inherit;padding:18px;cursor:pointer}
+button[disabled]{opacity:.5}
+.note{color:var(--muted);font-size:14px;text-align:center;margin-top:14px}
+.err{color:#A63D2F;font-size:15px;text-align:center;margin-top:12px;min-height:1.2em}
+#done{display:none;text-align:center;padding-top:60px}
+#done h1{font-size:44px}
+#done a{color:var(--blue)}
+</style>
+</head>
+<body>
+<main>
+  <form id="form" novalidate>
+    <div class="tag" id="tag">Feedback</div>
+    <h1>How am I doing?</h1>
+    <p class="lead">Two quick questions. Anonymous: no name, no sign-in.</p>
+    <fieldset>
+      <legend>Speed: am I going...</legend>
+      <div class="choices">
+        <label><input type="radio" name="speed" value="slow"><span>Too slow</span></label>
+        <label><input type="radio" name="speed" value="right"><span>Just right</span></label>
+        <label><input type="radio" name="speed" value="fast"><span>Too fast</span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Content: anything you think I missed that we should have covered?</legend>
+      <textarea name="content" maxlength="600" placeholder="Optional"></textarea>
+    </fieldset>
+    <button type="submit" id="send">Send</button>
+    <div class="err" id="err" role="alert"></div>
+    <div class="note">Your answer appears on the screen as a dot. Nobody can tell which one is yours.</div>
+  </form>
+  <div id="done">
+    <div class="tag" style="justify-content:center">Sent</div>
+    <h1>Thank you.</h1>
+    <p class="lead">That is all. <a href="" id="again">Send another</a></p>
+  </div>
+</main>
+<script>
+var TOPICS = {"1": "bca-fb-cc45e70182e7-1", "2": "bca-fb-cc45e70182e7-2", "3": "bca-fb-cc45e70182e7-3"};
+var LABELS = {"1": "First break", "2": "Second break", "3": "End of session"};
+var session = (/[?&]s=([123])/.exec(location.search) || [0, "1"])[1];
+document.getElementById("tag").textContent = LABELS[session] + " \u00b7 feedback";
+var form = document.getElementById("form"), err = document.getElementById("err"), send = document.getElementById("send");
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  var speed = (form.querySelector("input[name=speed]:checked") || {}).value || "", content = form.content.value.trim();
+  if (!speed && !content) { err.textContent = "Pick a speed or write a line first."; return; }
+  err.textContent = ""; send.disabled = true; send.textContent = "Sending";
+  fetch("https://ntfy.sh/" + TOPICS[session], {method: "POST", body: JSON.stringify({speed: speed, content: content})})
+    .then(function (r) { if (!r.ok) throw new Error(r.status); form.style.display = "none"; document.getElementById("done").style.display = "block"; })
+    .catch(function () { send.disabled = false; send.textContent = "Send"; err.textContent = "Could not send. Check your connection and try again."; });
+});
+document.getElementById("again").addEventListener("click", function (e) { e.preventDefault(); location.reload(); });
+</script>
+</body>
+</html>
