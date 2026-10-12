@@ -47,6 +47,11 @@ button[disabled]{opacity:.5}
     <div class="err" id="err" role="alert"></div>
     <div class="note">Your answer appears on the screen as a dot. Nobody can tell which one is yours.</div>
   </form>
+  <div id="closed" style="display:none;text-align:center;padding-top:60px">
+    <div class="tag" style="justify-content:center">Closed</div>
+    <h1>Feedback is closed.</h1>
+    <p class="lead">Thank you to everyone who answered.</p>
+  </div>
   <div id="done">
     <div class="tag" style="justify-content:center">Sent</div>
     <h1>Thank you.</h1>
@@ -54,6 +59,7 @@ button[disabled]{opacity:.5}
   </div>
 </main>
 <script>
+var FEEDBACK_OPEN = false;
 var TOPICS = {"1": "bca-fb-cc45e70182e7-1", "2": "bca-fb-cc45e70182e7-2", "3": "bca-fb-cc45e70182e7-3"};
 var LABELS = {"1": "First break", "2": "Second break", "3": "End of session"};
 var SPEED = {key: "speed", label: "Speed: am I going...", options: [["slow", "Too slow"], ["right", "Just right"], ["fast", "Too fast"]]};
@@ -81,8 +87,10 @@ questions.forEach(function (q) {
 });
 document.getElementById("tag").textContent = LABELS[session] + " \u00b7 feedback";
 var form = document.getElementById("form"), err = document.getElementById("err"), send = document.getElementById("send");
+if (!FEEDBACK_OPEN) { form.style.display = "none"; document.getElementById("closed").style.display = "block"; }
 form.addEventListener("submit", function (e) {
   e.preventDefault();
+  if (!FEEDBACK_OPEN) return;
   var answers = {}, picked = 0, content = form.content.value.trim();
   questions.forEach(function (q) { var choice = form.querySelector("input[name=" + q.key + "]:checked"); answers[q.key] = choice ? choice.value : ""; if (choice) picked += 1; });
   if (!picked && !content) { err.textContent = "Pick an answer or write a line first."; return; }
