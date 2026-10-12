@@ -14,7 +14,7 @@ main{max-width:520px;margin:0 auto;padding:28px 20px 48px}
 h1{font:600 40px/1.05 "Iowan Old Style",Palatino,Georgia,serif;letter-spacing:-.01em;margin:14px 0 8px}
 p.lead{color:var(--muted);margin:0 0 26px;font-size:17px;line-height:1.4}
 fieldset{border:0;padding:0;margin:0 0 26px}
-legend{font-weight:650;font-size:19px;padding:0;margin-bottom:12px}
+legend{font-weight:650;font-size:19px;line-height:1.25;padding:0;margin-bottom:12px}
 .choices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .choices label{display:block;cursor:pointer}
 .choices input{position:absolute;opacity:0;pointer-events:none}
@@ -37,15 +37,8 @@ button[disabled]{opacity:.5}
   <form id="form" novalidate>
     <div class="tag" id="tag">Feedback</div>
     <h1>How am I doing?</h1>
-    <p class="lead">Two quick questions. Anonymous: no name, no sign-in.</p>
-    <fieldset>
-      <legend>Speed: am I going...</legend>
-      <div class="choices">
-        <label><input type="radio" name="speed" value="slow"><span>Too slow</span></label>
-        <label><input type="radio" name="speed" value="right"><span>Just right</span></label>
-        <label><input type="radio" name="speed" value="fast"><span>Too fast</span></label>
-      </div>
-    </fieldset>
+    <p class="lead" id="lead"></p>
+    <div id="questions"></div>
     <fieldset>
       <legend>Content: anything you think I missed that we should have covered?</legend>
       <textarea name="content" maxlength="600" placeholder="Optional"></textarea>
@@ -63,15 +56,38 @@ button[disabled]{opacity:.5}
 <script>
 var TOPICS = {"1": "bca-fb-cc45e70182e7-1", "2": "bca-fb-cc45e70182e7-2", "3": "bca-fb-cc45e70182e7-3"};
 var LABELS = {"1": "First break", "2": "Second break", "3": "End of session"};
-var session = (/[?&]s=([123])/.exec(location.search) || [0, "1"])[1];
+var SPEED = {key: "speed", label: "Speed: am I going...", options: [["slow", "Too slow"], ["right", "Just right"], ["fast", "Too fast"]]};
+var QUESTIONS = {
+  "1": [SPEED],
+  "2": [SPEED],
+  "3": [
+    {key: "classroom", label: "Will this change what you do in your classroom?", options: [["low", "Not really"], ["mid", "Some of it"], ["high", "Yes, I'm using this"]]},
+    {key: "worth", label: "Was this worth your afternoon?", options: [["low", "Not really"], ["mid", "Somewhat"], ["high", "Absolutely"]]},
+    {key: "capable", label: "Could you run this build loop on your own tomorrow?", options: [["low", "Not yet"], ["mid", "With some help"], ["high", "Yes"]]}
+  ]
+};
+var COUNT_WORDS = {2: "Two", 4: "Four"};
+var session = (/[?&]s=([123])/.exec(location.search) || [0, "1"])[1], questions = QUESTIONS[session];
+document.getElementById("lead").textContent = COUNT_WORDS[questions.length + 1] + " quick questions. Anonymous: no name, no sign-in.";
+questions.forEach(function (q) {
+  var set = document.createElement("fieldset"), legend = document.createElement("legend"), choices = document.createElement("div");
+  legend.textContent = q.label; choices.className = "choices";
+  q.options.forEach(function (option) {
+    var label = document.createElement("label"), input = document.createElement("input"), text = document.createElement("span");
+    input.type = "radio"; input.name = q.key; input.value = option[0]; text.textContent = option[1];
+    label.appendChild(input); label.appendChild(text); choices.appendChild(label);
+  });
+  set.appendChild(legend); set.appendChild(choices); document.getElementById("questions").appendChild(set);
+});
 document.getElementById("tag").textContent = LABELS[session] + " \u00b7 feedback";
 var form = document.getElementById("form"), err = document.getElementById("err"), send = document.getElementById("send");
 form.addEventListener("submit", function (e) {
   e.preventDefault();
-  var speed = (form.querySelector("input[name=speed]:checked") || {}).value || "", content = form.content.value.trim();
-  if (!speed && !content) { err.textContent = "Pick a speed or write a line first."; return; }
+  var answers = {}, picked = 0, content = form.content.value.trim();
+  questions.forEach(function (q) { var choice = form.querySelector("input[name=" + q.key + "]:checked"); answers[q.key] = choice ? choice.value : ""; if (choice) picked += 1; });
+  if (!picked && !content) { err.textContent = "Pick an answer or write a line first."; return; }
   err.textContent = ""; send.disabled = true; send.textContent = "Sending";
-  fetch("https://ntfy.sh/" + TOPICS[session], {method: "POST", body: JSON.stringify({speed: speed, content: content})})
+  fetch("https://ntfy.sh/" + TOPICS[session], {method: "POST", body: JSON.stringify({answers: answers, content: content})})
     .then(function (r) { if (!r.ok) throw new Error(r.status); form.style.display = "none"; document.getElementById("done").style.display = "block"; })
     .catch(function () { send.disabled = false; send.textContent = "Send"; err.textContent = "Could not send. Check your connection and try again."; });
 });
